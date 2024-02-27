@@ -39,7 +39,7 @@ env = UR5EEnv(render=True)
 
 in_dim = env.Nstates  # 15
 u_dim = env.udim  # 6
-dicts = torch.load('Data_test/KK_UR5Elayer3_edim20_eloss0_gamma0.8_aloss1_hloss0.01.pth')
+dicts = torch.load('Data_test/UR5Elayer3_edim20_eloss0_gamma0.8_aloss1_hloss0.01.pth')
 state_dict = dicts["model"]
 Elayer = dicts["layer"]
 # print(layers)
