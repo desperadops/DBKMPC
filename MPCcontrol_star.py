@@ -27,7 +27,7 @@ sys.path.append("../utility")
 
 from ur5e_env import UR5EEnv
 #
-env_name = "Franka"
+env_name = "UR5E"
 layer_depth = 3
 encode_dim = 20
 gamma = 0.8
@@ -37,8 +37,8 @@ env = UR5EEnv(render=True)
 
 in_dim = env.Nstates  # 15
 u_dim = env.udim  # 6
-# dict = torch.load('epoch_4999_train_model.pth')
-dicts = torch.load('Data_test/KK_Frankalayer3_edim20_eloss0_gamma0.8_aloss1.pth')
+
+dicts = torch.load('Data_test/UR5Elayer3_edim20_eloss0_gamma0.8_aloss1.pth')
 state_dict = dicts["model"]
 Elayer = dicts["layer"]
 # print(layers)
@@ -164,17 +164,11 @@ for i in range(10):
     for j in range(num):
         t_ = (j+1)/(each_num+1)
         refs[(each_num+1)*i+j+1,:] =  t_*Star_points[i+1,:] + (1-t_)*Star_points[i,:]
-# print(each_num,each_num*10.5)
-# print(t.shape)
-# plt.plot(Star_points[:,0],Star_points[:,1])
+
 x = 0.4*np.ones((len(t),1))
 z = refs[:,1].reshape(-1,1)
 y = refs[:,0].reshape(-1,1)
-# plt.plot(y,z)
-# plt.axis('equal')
-# plt.xlabel('y (m)')
-# plt.ylabel('z (m)')
-# plt.show()
+
 
 JointAngles_Fig8 = np.empty((len(t),6))
 JointAngles_Fig8[:] = np.NaN
@@ -210,8 +204,8 @@ def cal_matrices(A, B, Q, R, F, N):
     return H, E
 
 
-def Prediction(M, T, G, H):
-    sol = solvers.qp(M, T, G, H, kktsolver='ldl', options={'kktreg':1e-15})
+def Prediction(M, T):
+    sol = solvers.qp(M, T, kktsolver='ldl', options={'kktreg':1e-15})
     U_thk = np.array(sol["x"])
     u_k = U_thk[0:u_dim, :]
     return u_k
@@ -232,10 +226,10 @@ H = np.zeros([NKoopman, u_dim])
 for i in range(NKoopman):
     H = h[i] * initial_data[i] + H
 B = Bd + H
-Q = np.eye(NKoopman)*1000000
+Q = np.eye(NKoopman)*500
 Q[9:] = 0
 Q[3:9] = Q[3:9]
-F = np.eye(NKoopman)*1000000
+F = np.eye(NKoopman)*500
 F[9:] = 0
 F[3:9] = F[3:9]
 R = np.eye(u_dim)*0.1
@@ -251,10 +245,6 @@ X_k[:, 0] = Trail[0][:]
 U_k = np.zeros((u_dim, K_steps))
 N = 5
 
-state_max = np.zeros((35, 1))
-state_max[2] = 0.80
-state_max[1] = 0.25
-state_max[0] = 0.55
 
 state = env.reset()
 for i, jnt in enumerate(states_des[0, 3:8]):
@@ -274,15 +264,11 @@ for k in range(1, K_steps):
     T = np.dot(C, x_kshort)
     T = matrix(T)
     for i in range(u_dim):
-        U_k[i, k - 1] = Prediction(M, T, G, hhh)[i, 0]
+        U_k[i, k - 1] = Prediction(M, T)[i, 0]
     # b = U_k[:, k-1]
     X_knew = env.step(U_k[:, k - 1])
     control_trail[k - 1] = X_knew
-    # control_trail[k - 1] = X_knew
-    # noise = np.random.randn(3) * 1e-1
-    # X_knew = np.concatenate((X_knew[:3] + noise, X_knew[3:]), axis=0)
-    # time.sleep(1.0 / 600000.)
-    # time.sleep(0.5)
+
     X_knew = torch.tensor(X_knew, dtype=torch.float64, requires_grad=False)
     X_knew = net.encode(X_knew).detach().numpy()
 
@@ -295,31 +281,13 @@ for k in range(1, K_steps):
         H = h[i] * X_knew[i] + H
     B = Bd + H
 
-    z_max = state_max[2] - np.matmul(A, X_knew.reshape(35, 1))[2]
-    # y_max = state_max[1] + np.matmul(A, X_knew.reshape(35, 1))[1]
-    # yz_max = np.matmul(A, X_knew.reshape(35, 1))[2] + np.matmul(A, X_knew.reshape(35, 1))[1] - state_max[0]
-
-    hhh[2, 0] = z_max
-    # hhh[1, 0] = y_max
-    # hhh[0, 0] = yz_max
-
-    # G[0, :6] = -B[1] - B[2]
-    G[2, :6] = B[2]
-    # G[1, :6] = -B[1]
-
-b = X_k[0:9, 1:]
-c = b**2
-a = np.sum(c, axis=0)
-a = np.sum(np.sqrt(a))
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.sans-serif'] = 'FangSong'
-np.savetxt("control_trail_star.txt", control_trail)
-np.savetxt("X_k_star.txt", X_k)
 # plt.plot(states_des[:, 1], states_des[:, 2], label='Desired')
 # plt.plot(control_trail[:, 1], control_trail[:, 2], label='KP')
 plt.plot(states_des[:, 1], states_des[:, 2], label='期望轨迹')
 plt.plot(control_trail[:, 1], control_trail[:, 2], label='本方法控制的实际轨迹')
 plt.legend()
 plt.show()
-#
+
 
