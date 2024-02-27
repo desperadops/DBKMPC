@@ -28,11 +28,6 @@ sys.path.append("../utility")
 
 from ur5e_env import UR5EEnv
 
-# a = open("test.csv", 'w', newline='')
-# data_writer1 = csv.writer(a)
-# for row in train_data:
-#     data_writer1.writerow(row)
-
 
 env_name = "Franka"
 layer_depth = 3
@@ -44,8 +39,7 @@ env = UR5EEnv(render=True)
 
 in_dim = env.Nstates  # 15
 u_dim = env.udim  # 6
-# dict = torch.load('epoch_4999_train_model.pth')
-dicts = torch.load('Data_test/KK_Frankalayer3_edim20_eloss0_gamma0.8_aloss1_hloss0.01.pth')
+dicts = torch.load('Data_test/KK_UR5Elayer3_edim20_eloss0_gamma0.8_aloss1_hloss0.01.pth')
 state_dict = dicts["model"]
 Elayer = dicts["layer"]
 # print(layers)
@@ -119,13 +113,6 @@ z = np.expand_dims(0.44 + 2 * a * np.sin(t) * np.cos(t) / (1 + np.sin(t) ** 2), 
 y = np.expand_dims(a * np.cos(t) / (1 + np.sin(t) ** 2), axis=1)
 
 
-# plt.plot(y, z)
-# plt.axis('equal')
-# plt.xlabel('y (m)')
-# plt.ylabel('z (m)')
-
-
-#
 def accurateCalculateInverseKinematics(kukaId, endEffectorId, targetPos, threshold, maxIter):
     """
     Calculates the joint poses given the End Effector location using inverse kinematics
@@ -221,11 +208,11 @@ H = np.zeros([NKoopman, u_dim])
 for i in range(NKoopman):
     H = h[i] * initial_data[i] + H
 B = Bd + H
-Q = np.eye(NKoopman) * 1000000
+Q = np.eye(NKoopman) * 500
 Q[9:] = 0
 Q[3:9] = Q[3:9]
 Q[0:3] = Q[0:3]
-F = np.eye(NKoopman) * 1000000
+F = np.eye(NKoopman) * 500
 F[9:] = 0
 F[3:9] = F[3:9]
 F[0:3] = F[0:3]
@@ -243,12 +230,6 @@ X_k[:, 0] = Trail[0][:]
 # X_k[:, 0] = initial_data
 U_k = np.zeros((u_dim, K_steps))
 
-
-# state_min = np.array()
-state_max = np.zeros((35, 1))
-state_max[2] = 0.7
-state_max[1] = 0.26
-state_max[0] = 0.95
 
 state = env.reset()
 for i, jnt in enumerate(states_des[0, 3:8]):
@@ -288,35 +269,13 @@ for k in range(1, K_steps):
     for i in range(NKoopman):
         H = h[i] * X_knew[i] + H
     B = Bd + H
-
-    # z_max = state_max[2] - np.matmul(A, X_knew.reshape(35, 1))[2]
-    # y_max = state_max[1] - np.matmul(A, X_knew.reshape(35, 1))[1]
-    yz_max = state_max[0] - np.matmul(A, X_knew.reshape(35, 1))[2] - np.matmul(A, X_knew.reshape(35, 1))[1]
-
-    # hhh[2, 0] = z_max
-    # hhh[1, 0] = y_max
-    hhh[0, 0] = yz_max
-
-    G[0, :6] = B[1] + B[2]
-    # G[2, :6] = B[2]
-    # G[1, :6] = B[1]
-
+ 
     # endtime = datetime.datetime.now()
     # print(endtime-starttime)
 
-b = X_k[0:9, 1:]
-c = b ** 2
-a = np.sum(c, axis=0)
-a = np.sum(np.sqrt(a))
-# np.savetxt("states_des.txt", states_des)
-np.savetxt("control_trail.txt", control_trail)
-np.savetxt("X_k.txt", X_k)
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.sans-serif'] = 'FangSong'
 plt.plot(states_des[:, 1], states_des[:, 2], label='期望轨迹')
 plt.plot(control_trail[:, 1], control_trail[:, 2], label='本方法控制的实际轨迹')
 plt.legend()
 plt.show()
-JointAngles_Fig8 = accurateCalculateInverseKinematics(env.robot, env.ee_id, [-0.5, 0, 0.3],
-                                                      accuracy_invKin, 10000)
-print(JointAngles_Fig8)
