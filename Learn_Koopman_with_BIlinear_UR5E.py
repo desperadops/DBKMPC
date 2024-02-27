@@ -203,7 +203,7 @@ def train(env_name,train_steps = 300000,suffix="",all_loss=0,\
     eval_step = 1000
     best_loss = 1000.0
     best_state_dict = {}
-    subsuffix = suffix+"KK_"+env_name+"layer{}_edim{}_eloss{}_gamma{}_aloss{}_hloss{}".format(layer_depth,encode_dim,e_loss,gamma,all_loss,beta)
+    subsuffix = suffix+env_name+"layer{}_edim{}_eloss{}_gamma{}_aloss{}_hloss{}".format(layer_depth,encode_dim,e_loss,gamma,all_loss,beta)
     logdir = "Data_test/"+suffix+"/"+subsuffix
     if not os.path.exists( "Data_test/"+suffix):
         os.makedirs("Data_test/"+suffix)
