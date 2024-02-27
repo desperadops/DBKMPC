@@ -29,7 +29,7 @@ sys.path.append("../utility")
 from ur5e_env import UR5EEnv
 
 
-env_name = "Franka"
+env_name = "UR5E"
 layer_depth = 3
 encode_dim = 20
 gamma = 0.8
